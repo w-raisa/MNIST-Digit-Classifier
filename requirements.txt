@@ -1,0 +1,5 @@
+numpy
+streamlit
+matplotlib
+streamlit_drawable_canvas
+notebook
