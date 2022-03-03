@@ -1,19 +1,30 @@
 # app_frontend.py
 
 # external dependencies
-#import tensorflow as tf 
-#from tensorflow.keras.models import load_model
+import tensorflow as tf 
+from tensorflow.keras.models import load_model # imprting func we need to load model
 
 import numpy as np
 import streamlit as st
 import matplotlib.pyplot as plt
 from streamlit_drawable_canvas import st_canvas
+from skimage.transform import resize # to resize the submitted canvas img to 28 x 28 as our mdoel accepts 28 x 28 imgs
+from skimage.color import rgb2gray # submitted canvas is rgb (has 3 channels) need to convert it to gray scale because our model accepts only gray scale imgs
 
 # high-level overview #
 # 1. allow the user to draw a digit/something on a canvas
 # 2. allow the user to submit the image for prediction/inference
 # 3. image -> resizing image -> model -> 10x1 numpy array of probabilities ->
 #    ... -> transfer information to the front-end -> display probabilities as a histogram
+
+# puts whatever is being returned by the function in a cache (so here its a tf model)
+#@st.cache(suppress_st_warning=True) # this is a decorator, tells streamlit load this once and only once (cuz streamlit runs from top to bottom everytime soemthing happens on website). 
+def load_pretrained_model(file_path = "CNN_model"):
+    return load_model(file_path) # returns model in file_path
+
+
+model = load_pretrained_model()
+
 
 def predict():
     # placeholder for the function that will handle 
@@ -48,14 +59,29 @@ canvas_result = st_canvas(
     background_color=bg_color,
     # keep this as False to avoid re-running the app whenever the user starts drawing
     update_streamlit=False, 
-    height=150,
+    height=224,
+    width=224, #in pixels 
     drawing_mode=drawing_mode,
     key="canvas",
 )
+
 if st.button("SUBMIT"):
     # stuff below only gets run once the user hits the "SUBMIT" button
-    probabilities = predict()
+    grayscale_img = rgb2gray(canvas_result.image_data) # turn img grayscale
+    resized_image = resize(grayscale_img, (28,28))
+
+    probabilities = model.predict(np.expand_dims(resized_image, axis=0))
     st.markdown(str(probabilities))
     fig, ax = plt.subplots()
-    ax.hist(probabilities)
+    ax.scatter(list(range(10)), probabilities)
     st.pyplot(fig)
+
+    # resize img to 28 x 28 img
+    #st.image(canvas_result.image_data)
+
+    #st.image(grayscale_img)
+    #print(resized_image)
+
+
+    # pass resized img to model
+
