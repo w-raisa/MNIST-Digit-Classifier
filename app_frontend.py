@@ -1,7 +1,7 @@
 # app_frontend.py
 
 # external dependencies
-#import tensorflow as tf 
+#import tensorflow as tf
 #from tensorflow.keras.models import load_model
 
 import numpy as np
@@ -42,15 +42,16 @@ drawing_mode = "freedraw"
 
 # Create a canvas component
 canvas_result = st_canvas(
-    fill_color="rgba(255, 165, 0, 0.3)",  # Fixed fill color with some opacity
-    stroke_width=stroke_width,
-    stroke_color=stroke_color,
-    background_color=bg_color,
+    fill_color = "rgba(255, 165, 0, 0.3)",  # Fixed fill color with some opacity
+    stroke_width = stroke_width,
+    stroke_color = stroke_color,
+    background_color = bg_color,
     # keep this as False to avoid re-running the app whenever the user starts drawing
-    update_streamlit=False, 
-    height=150,
-    drawing_mode=drawing_mode,
-    key="canvas",
+    update_streamlit = False, 
+    height = 150,
+    width = 150,
+    drawing_mode = drawing_mode,
+    key = "canvas",
 )
 if st.button("SUBMIT"):
     # stuff below only gets run once the user hits the "SUBMIT" button
@@ -59,3 +60,4 @@ if st.button("SUBMIT"):
     fig, ax = plt.subplots()
     ax.hist(probabilities)
     st.pyplot(fig)
+    st.image(canvas_result.image_data)
