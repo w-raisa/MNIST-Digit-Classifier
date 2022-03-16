@@ -18,10 +18,12 @@ from scipy.special import softmax
 def load_pretrained_model(file_path = "CNN_model"):
     return load_model(file_path) # returns model in file_path
 
-
 model = load_pretrained_model()
 
-st.title("Digit Detector")
+def normalize_img(image: np.ndarray):
+    """Normalizes images: `uint8` -> `float32`."""
+    return 1. - image.astype(np.float32) / 255.
+
 
 # Specify canvas parameters in application
 # NOTE: the st.sidebar prefix simply indicates that the streamlit object
@@ -31,48 +33,50 @@ stroke_color = st.sidebar.color_picker("Stroke color hex: ")
 bg_color = st.sidebar.color_picker("Background color hex: ", "#eee")
 drawing_mode = "freedraw"
 
-# Create a canvas component
-canvas_result = st_canvas(
-    fill_color = "rgba(255, 165, 0, 0.3)",  # Fixed fill color with some opacity
-    stroke_width = stroke_width,
-    stroke_color = stroke_color,
-    background_color = bg_color,
-    # keep this as False to avoid re-running the app whenever the user starts drawing
-    update_streamlit=False, 
-    height=224,
-    width=224, #in pixels 
-    drawing_mode=drawing_mode,
-    key="canvas",
-)
+col1, col2, col3 = st.columns([1,6,1])
 
-def normalize_img(image: np.ndarray):
-  """Normalizes images: `uint8` -> `float32`."""
-  return 1. - image.astype(np.float32) / 255.
+with col2:
+    st.title("Digit Detector")
 
-if st.button("SUBMIT"):
-    # stuff below only gets run once the user hits the "SUBMIT" button
-    grayscale_img = normalize_img(
-        np.sum(canvas_result.image_data[:,:,:3], axis=-1)
-     ) # turn img grayscale
-    resized_image = resize(grayscale_img, (28,28))
-    
-    signals = model.predict(np.expand_dims(resized_image, axis=0)).flatten()
+    # Create a canvas component
+    canvas_result = st_canvas(
+        fill_color = "rgba(255, 165, 0, 0.3)",  # Fixed fill color with some opacity
+        stroke_width = stroke_width,
+        stroke_color = stroke_color,
+        background_color = bg_color,
+        # keep this as False to avoid re-running the app whenever the user starts drawing
+        update_streamlit=True, 
+        height=224,
+        width=224, #in pixels 
+        drawing_mode=drawing_mode,
+        key="canvas",
+    )
 
-    # change signals into probabilities using softmax
-    probabilities = softmax(signals)
-    values = ['0', '1', '2', '3','4','5', '6', '7', '8', '9']
-    plt.style.use('seaborn')
-    plt.rcParams.update({'text.color': "white",
-                     'axes.labelcolor': "white"})
-    fig, ax = plt.subplots()
-    ax.tick_params(axis='x', colors='white')    #setting up X-axis tick color to red
-    ax.tick_params(axis='y', colors='white')  #setting up Y-axis tick color to black
-    ax.bar(list(range(10)), probabilities)
-    plt.xticks(list(range(0,10)), values)
 
-    ax.set_xlabel('Digit', fontweight ='bold', )
-    ax.set_ylabel('Probabilities', fontweight ='bold')
-    st.pyplot(fig, transparent=True)
+    if st.button("SUBMIT"):
+        # stuff below only gets run once the user hits the "SUBMIT" button
+        grayscale_img = normalize_img(
+            np.sum(canvas_result.image_data[:,:,:3], axis=-1)
+        ) # turn img grayscale
+        resized_image = resize(grayscale_img, (28,28))
+        
+        signals = model.predict(np.expand_dims(resized_image, axis=0)).flatten()
+
+        # change signals into probabilities using softmax
+        probabilities = softmax(signals)
+        values = ['0', '1', '2', '3','4','5', '6', '7', '8', '9']
+        plt.style.use('seaborn')
+        plt.rcParams.update({'text.color': "white",
+                        'axes.labelcolor': "white"})
+        fig, ax = plt.subplots()
+        ax.tick_params(axis='x', colors='white')    #setting up X-axis tick color to red
+        ax.tick_params(axis='y', colors='white')  #setting up Y-axis tick color to black
+        ax.bar(list(range(10)), probabilities)
+        plt.xticks(list(range(0,10)), values)
+
+        ax.set_xlabel('Digit', fontweight ='bold', )
+        ax.set_ylabel('Probabilities', fontweight ='bold')
+        st.pyplot(fig, transparent=True)
 
 
 
