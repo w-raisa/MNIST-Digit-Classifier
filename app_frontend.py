@@ -9,7 +9,7 @@ import streamlit as st
 import matplotlib.pyplot as plt
 from streamlit_drawable_canvas import st_canvas
 from skimage.transform import resize # to resize the submitted canvas img to 28 x 28 as our mdoel accepts 28 x 28 imgs
-from skimage.color import rgb2gray # submitted canvas is rgb (has 3 channels) need to convert it to gray scale because our model accepts only gray scale imgs
+from skimage.color import rgb2gray, rgba2rgb # submitted canvas is rgb (has 3 channels) need to convert it to gray scale because our model accepts only gray scale imgs
 
 # high-level overview #
 # 1. allow the user to draw a digit/something on a canvas
@@ -53,10 +53,10 @@ drawing_mode = "freedraw"
 
 # Create a canvas component
 canvas_result = st_canvas(
-    fill_color="rgba(255, 165, 0, 0.3)",  # Fixed fill color with some opacity
-    stroke_width=stroke_width,
-    stroke_color=stroke_color,
-    background_color=bg_color,
+    fill_color = "rgba(255, 165, 0, 0.3)",  # Fixed fill color with some opacity
+    stroke_width = stroke_width,
+    stroke_color = stroke_color,
+    background_color = bg_color,
     # keep this as False to avoid re-running the app whenever the user starts drawing
     update_streamlit=False, 
     height=224,
@@ -65,22 +65,36 @@ canvas_result = st_canvas(
     key="canvas",
 )
 
+def normalize_img(image: np.ndarray):
+  """Normalizes images: `uint8` -> `float32`."""
+  return 1. - image.astype(np.float32) / 255.
+
 if st.button("SUBMIT"):
     # stuff below only gets run once the user hits the "SUBMIT" button
-    grayscale_img = rgb2gray(canvas_result.image_data) # turn img grayscale
+    grayscale_img = normalize_img(
+        np.sum(canvas_result.image_data[:,:,:3], axis=-1)
+     ) # turn img grayscale
     resized_image = resize(grayscale_img, (28,28))
 
-    probabilities = model.predict(np.expand_dims(resized_image, axis=0))
+    for x in range(canvas_result.image_data.shape[-1]):
+        print(x, np.unique(canvas_result.image_data[:,:,x]))
+        print(x, np.unique(rgb2gray(canvas_result.image_data[:,:,:3])))
+    
+    probabilities = model.predict(np.expand_dims(resized_image, axis=0)).flatten()
     st.markdown(str(probabilities))
     fig, ax = plt.subplots()
-    ax.scatter(list(range(10)), probabilities)
+    ax.bar(list(range(10)), probabilities)
     st.pyplot(fig)
 
     # resize img to 28 x 28 img
-    #st.image(canvas_result.image_data)
+    st.image(canvas_result.image_data)
+    fig, ax = plt.subplots()
+    ax.imshow(grayscale_img, cmap='binary')
+    st.pyplot(fig)
 
-    #st.image(grayscale_img)
-    #print(resized_image)
+    fig, ax = plt.subplots()
+    ax.imshow(resized_image, cmap='binary')
+    st.pyplot(fig)
 
 
     # pass resized img to model
