@@ -11,44 +11,24 @@ from streamlit_drawable_canvas import st_canvas
 from skimage.transform import resize # to resize the submitted canvas img to 28 x 28 as our mdoel accepts 28 x 28 imgs
 from skimage.color import rgb2gray, rgba2rgb # submitted canvas is rgb (has 3 channels) need to convert it to gray scale because our model accepts only gray scale imgs
 
-# high-level overview #
-# 1. allow the user to draw a digit/something on a canvas
-# 2. allow the user to submit the image for prediction/inference
-# 3. image -> resizing image -> model -> 10x1 numpy array of probabilities ->
-#    ... -> transfer information to the front-end -> display probabilities as a histogram
+from scipy.special import softmax
+
 
 # puts whatever is being returned by the function in a cache (so here its a tf model)
-#@st.cache(suppress_st_warning=True) # this is a decorator, tells streamlit load this once and only once (cuz streamlit runs from top to bottom everytime soemthing happens on website). 
 def load_pretrained_model(file_path = "CNN_model"):
     return load_model(file_path) # returns model in file_path
 
 
 model = load_pretrained_model()
 
-
-def predict():
-    # placeholder for the function that will handle 
-    # model predictions
-    # input:    nothing for now, will be an image
-    # output:   numpy vector of probabilities such that 
-    #           vector[0] == probability that the image is a 0
-    vector = np.random.rand(10)
-    return vector
-
-st.title("LIVE MNIST")
-
-st.markdown("# THIS IS A TITLE")
+st.title("Digit Detector")
 
 # Specify canvas parameters in application
 # NOTE: the st.sidebar prefix simply indicates that the streamlit object
 #       will be placed in the sidebar rather than in the web app's main body
-stroke_width = st.sidebar.slider("Stroke width: ", 1, 25, 3)
+stroke_width = st.sidebar.slider("Stroke width: ", min_value=20, max_value=30, step=1, value=20)
 stroke_color = st.sidebar.color_picker("Stroke color hex: ")
 bg_color = st.sidebar.color_picker("Background color hex: ", "#eee")
-# bg_image = st.sidebar.file_uploader("Background image:", type=["png", "jpg"])
-#drawing_mode = st.sidebar.selectbox(
-#    "Drawing tool:", ("freedraw", "line", "rect", "circle", "transform")
-#)
 drawing_mode = "freedraw"
 
 # Create a canvas component
@@ -75,27 +55,24 @@ if st.button("SUBMIT"):
         np.sum(canvas_result.image_data[:,:,:3], axis=-1)
      ) # turn img grayscale
     resized_image = resize(grayscale_img, (28,28))
-
-    for x in range(canvas_result.image_data.shape[-1]):
-        print(x, np.unique(canvas_result.image_data[:,:,x]))
-        print(x, np.unique(rgb2gray(canvas_result.image_data[:,:,:3])))
     
-    probabilities = model.predict(np.expand_dims(resized_image, axis=0)).flatten()
-    st.markdown(str(probabilities))
+    signals = model.predict(np.expand_dims(resized_image, axis=0)).flatten()
+
+    # change signals into probabilities using softmax
+    probabilities = softmax(signals)
+    values = ['0', '1', '2', '3','4','5', '6', '7', '8', '9']
+    plt.style.use('seaborn')
+    plt.rcParams.update({'text.color': "white",
+                     'axes.labelcolor': "white"})
     fig, ax = plt.subplots()
+    ax.tick_params(axis='x', colors='white')    #setting up X-axis tick color to red
+    ax.tick_params(axis='y', colors='white')  #setting up Y-axis tick color to black
     ax.bar(list(range(10)), probabilities)
-    st.pyplot(fig)
+    plt.xticks(list(range(0,10)), values)
 
-    # resize img to 28 x 28 img
-    st.image(canvas_result.image_data)
-    fig, ax = plt.subplots()
-    ax.imshow(grayscale_img, cmap='binary')
-    st.pyplot(fig)
-
-    fig, ax = plt.subplots()
-    ax.imshow(resized_image, cmap='binary')
-    st.pyplot(fig)
+    ax.set_xlabel('Digit', fontweight ='bold', )
+    ax.set_ylabel('Probabilities', fontweight ='bold')
+    st.pyplot(fig, transparent=True)
 
 
-    # pass resized img to model
 
