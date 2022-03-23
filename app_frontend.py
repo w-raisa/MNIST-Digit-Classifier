@@ -73,6 +73,7 @@ with col2:
         ax.tick_params(axis='y', colors='white')  #setting up Y-axis tick color to black
         ax.bar(list(range(10)), probabilities)
         plt.xticks(list(range(0,10)), values)
+        plt.title("Predictions")
 
         ax.set_xlabel('Digit', fontweight ='bold', )
         ax.set_ylabel('Probabilities', fontweight ='bold')
